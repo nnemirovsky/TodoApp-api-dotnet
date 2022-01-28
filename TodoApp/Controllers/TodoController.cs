@@ -29,8 +29,9 @@ public class TodoController : Controller
     {
         var validFilter = new PaginationFilter(filter.PageNumber, filter.PageSize);
         var user = HelperMethods.GetUserByClaims(User, _context);
-        var lists = _context.ItemLists.Where(il => il.Author == user);
-        var pagedLists = lists.Skip((validFilter.PageNumber - 1) * validFilter.PageSize).Take(validFilter.PageSize);
+        var lists = _context.ItemLists.Where(il => il.Author == user).OrderBy(il => il.Id);
+        var pagedLists = lists.Skip((validFilter.PageNumber - 1) * validFilter.PageSize)
+            .Take(validFilter.PageSize);
         var totalRecords = lists.Count();
         var pagedResponse = PaginationHelper.CreatePagedResponse(pagedLists.Select(il => new
         {

@@ -10,39 +10,49 @@ using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using TodoApp.Data;
+using TodoApp.Filters;
 using TodoApp.Helpers;
 using TodoApp.Models;
+using TodoApp.Services;
 using TodoApp.Wrappers;
 
 namespace TodoApp.Controllers;
 
 [ApiController]
-[Route("user")]
+[Route("users")]
 public class AccountController : Controller
 {
     private readonly ILogger<AccountController> _logger;
     private readonly AppDbContext _context;
     private readonly IConfiguration _config;
+    private readonly IUriService _uriService;
 
-    public AccountController(ILogger<AccountController> logger, AppDbContext context, IConfiguration config)
+    public AccountController(ILogger<AccountController> logger, AppDbContext context, IConfiguration config,
+        IUriService uriService)
     {
         _logger = logger;
         _context = context;
         _config = config;
+        _uriService = uriService;
     }
 
-    // [Authorize(Roles = "Admin")]
-    // [HttpGet]
-    // public IActionResult GetUsers()
-    // {
-    //     return Ok(_context.Users.Select(user => new UserDto
-    //     {
-    //         Email = user.Email,
-    //         Id = user.Id,
-    //         Name = user.Name,
-    //         Role = user.Role.ToString()
-    //     }));
-    // }
+    [Authorize(Roles = "Admin")]
+    [HttpGet]
+    public IActionResult GetUsers([FromQuery] PaginationFilter filter)
+    {
+        var validFilter = new PaginationFilter(filter.PageNumber, filter.PageSize);
+        var pagedData = _context.Users.OrderBy(u => u.Id)
+            .Skip((validFilter.PageNumber - 1) * validFilter.PageSize)
+            .Take(validFilter.PageSize).Select(user => new UserDto
+            {
+                Email = user.Email,
+                Id = user.Id,
+                Name = user.Name,
+                Role = user.Role.ToString()
+            }).ToList();
+        return Ok(PaginationHelper.CreatePagedResponse(pagedData, validFilter, _context.Users.Count(), _uriService,
+            Request.Path.Value!));
+    }
 
     [Authorize]
     [HttpGet("{id:long}")]
