@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using TodoApp.Data;
 using TodoApp.Filters;
 using TodoApp.Helpers;
@@ -114,11 +115,10 @@ public class TodoController : Controller
     [HttpPatch("items/{id:long}")]
     public IActionResult UpdateItem(long id, UpdateItemDto item)
     {
-        var itemFound = _context.Items.Find(id);
+        var itemFound = _context.Items.Include(i => i.List).FirstOrDefault(i => i.Id == id);
         if (itemFound is null)
             return NotFound(new ApiResponse {Message = "List not found.", Succeeded = false});
-        var list = _context.ItemLists.Find(itemFound.ListId);
-        if (HelperMethods.GetUserByClaims(User, _context) != list!.Author)
+        if (HelperMethods.GetUserByClaims(User, _context) != itemFound.List.Author)
             return Forbid();
         if (item.Name is not null)
             itemFound.Name = item.Name;
@@ -133,11 +133,10 @@ public class TodoController : Controller
     [HttpDelete("items/{id:long}")]
     public IActionResult DeleteItem(long id)
     {
-        var item = _context.Items.Find(id);
+        var item = _context.Items.Include(i => i.List).FirstOrDefault(i => i.Id == id);
         if (item is null)
             return NotFound(new ApiResponse {Message = "List not found.", Succeeded = false});
-        var list = _context.ItemLists.Find(item.ListId);
-        if (HelperMethods.GetUserByClaims(User, _context) != list!.Author)
+        if (HelperMethods.GetUserByClaims(User, _context) != item.List.Author)
             return Forbid();
         _context.Items.Remove(item);
         _context.SaveChanges();
