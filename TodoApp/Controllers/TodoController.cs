@@ -28,11 +28,10 @@ public class TodoController : Controller
     [HttpGet("lists")]
     public IActionResult GetAllLists([FromQuery] PaginationFilter filter)
     {
-        var validFilter = new PaginationFilter(filter.PageNumber, filter.PageSize);
         var user = HelperMethods.GetUserByClaims(User, _context);
         var lists = _context.ItemLists.Where(il => il.Author == user).OrderBy(il => il.Id);
-        var pagedLists = lists.Skip((validFilter.PageNumber - 1) * validFilter.PageSize)
-            .Take(validFilter.PageSize);
+        var pagedLists = lists.Skip((filter.PageNumber - 1) * filter.PageSize)
+            .Take(filter.PageSize);
         var totalRecords = lists.Count();
         var pagedResponse = PaginationHelper.CreatePagedResponse(pagedLists.Select(il => new
         {
@@ -44,7 +43,7 @@ public class TodoController : Controller
                 Name = item.Name,
                 IsComplete = item.IsComplete
             }).ToList()
-        }), validFilter, totalRecords, _uriService, Request.Path.Value!);
+        }), filter, totalRecords, _uriService, Request.Path.Value!);
         return Ok(pagedResponse);
     }
 
@@ -52,11 +51,11 @@ public class TodoController : Controller
     [HttpPost("lists")]
     public IActionResult CreateList(CreateListWithItemsDto list)
     {
-        var createdList = _context.ItemLists.Add(new ItemList
-            {Name = list.Name, Author = HelperMethods.GetUserByClaims(User, _context)}).Entity;
-        var createdItems = new List<Item>();
-        foreach (var item in list.Items)
-            createdItems.Add(_context.Items.Add(new Item {List = createdList, Name = item.Name}).Entity);
+        var createdList = _context.ItemLists.Add(
+            new ItemList(list.Name, HelperMethods.GetUserByClaims(User, _context))).Entity;
+        List<Item> createdItems = list.Items is not null
+            ? list.Items.Select(item => _context.Items.Add(new Item(item.Name, createdList)).Entity).ToList()
+            : new List<Item>();
         _context.SaveChanges();
         return CreatedAtAction(nameof(GetList), new {id = createdList.Id}, new ApiResponse(new
         {
@@ -68,9 +67,9 @@ public class TodoController : Controller
 
     [Authorize]
     [HttpGet("lists/{id:long}")]
-    public IActionResult GetList(long id)
+    public async Task<IActionResult> GetList(long id)
     {
-        var list = _context.ItemLists.Find(id);
+        var list = await _context.ItemLists.FindAsync(id);
         if (list is null)
             return NotFound(new ApiResponse {Message = "List not found.", Succeeded = false});
         if (HelperMethods.GetUserByClaims(User, _context) != list.Author)
@@ -86,7 +85,7 @@ public class TodoController : Controller
     [HttpDelete("lists/{id:long}")]
     public async Task<IActionResult> DeleteList(long id)
     {
-        var list = _context.ItemLists.Find(id);
+        var list = await _context.ItemLists.FindAsync(id);
         if (list is null)
             return NotFound(new ApiResponse {Message = "List not found.", Succeeded = false});
         if (HelperMethods.GetUserByClaims(User, _context) != list.Author)
@@ -106,7 +105,7 @@ public class TodoController : Controller
         if (HelperMethods.GetUserByClaims(User, _context) != list.Author)
             return Forbid();
 
-        _context.Items.Add(new Item {List = list, Name = item.Name});
+        _context.Items.Add(new Item(item.Name, list));
         await _context.SaveChangesAsync();
         return Accepted(new ApiResponse {Message = $"Item added to list '{list.Name}' successfully."});
     }
@@ -115,9 +114,16 @@ public class TodoController : Controller
     [HttpPatch("items/{id:long}")]
     public IActionResult UpdateItem(long id, UpdateItemDto item)
     {
-        var itemFound = _context.Items.Include(i => i.List).FirstOrDefault(i => i.Id == id);
-        if (itemFound is null)
+        Item itemFound;
+        try
+        {
+            itemFound = _context.Items.Include(i => i.List).First(i => i.Id == id);
+        }
+        catch (InvalidOperationException)
+        {
             return NotFound(new ApiResponse {Message = "List not found.", Succeeded = false});
+        }
+
         if (HelperMethods.GetUserByClaims(User, _context) != itemFound.List.Author)
             return Forbid();
         if (item.Name is not null)
@@ -133,9 +139,16 @@ public class TodoController : Controller
     [HttpDelete("items/{id:long}")]
     public IActionResult DeleteItem(long id)
     {
-        var item = _context.Items.Include(i => i.List).FirstOrDefault(i => i.Id == id);
-        if (item is null)
+        Item item;
+        try
+        {
+            item = _context.Items.Include(i => i.List).First(i => i.Id == id);
+        }
+        catch (InvalidOperationException)
+        {
             return NotFound(new ApiResponse {Message = "List not found.", Succeeded = false});
+        }
+
         if (HelperMethods.GetUserByClaims(User, _context) != item.List.Author)
             return Forbid();
         _context.Items.Remove(item);

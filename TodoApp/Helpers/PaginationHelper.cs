@@ -4,7 +4,7 @@ using TodoApp.Wrappers;
 
 namespace TodoApp.Helpers;
 
-public class PaginationHelper
+public static class PaginationHelper
 {
     public static PagedResponse CreatePagedResponse(object pagedData, PaginationFilter validFilter, int totalRecords,
         IUriService uriService, string route)

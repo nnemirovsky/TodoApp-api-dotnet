@@ -4,27 +4,33 @@ namespace TodoApp.Models;
 
 public class ItemList
 {
+    public ItemList(string name, User author)
+    {
+        Name = name;
+        Author = author;
+    }
+
+    public ItemList()
+    { }
+
     public long Id { get; init; }
 
-    public string Name { get; init; } = default!;
+    public string Name { get; init; }
 
-    // public bool IsTotalComplete { get; init; }
-    
-    [ForeignKey("UserId")]
-    public User Author { get; init; } = default!;
+    [ForeignKey("UserId")] public User Author { get; init; }
 }
 
 public record CreateListWithItemsDto
 {
-    public string Name { get; init; } = default!;
-    public IEnumerable<ItemDto> Items { get; init; } = default!;
+    public string Name { get; init; }
+    public IEnumerable<ItemDto>? Items { get; init; }
 }
 
 public record ItemListDetailDto
 {
     public long Id { get; init; }
 
-    public string Name { get; init; } = default!;
-    
-    public IEnumerable<ItemDto> Items { get; init; } = default!;
+    public string Name { get; init; }
+
+    public IEnumerable<ItemDto>? Items { get; init; }
 }

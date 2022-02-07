@@ -2,8 +2,20 @@
 
 public class PaginationFilter
 {
-    public int PageNumber { get; init; }
-    public int PageSize { get; init; }
+    private readonly int _pageNumber;
+    private readonly int _pageSize;
+
+    public int PageNumber
+    {
+        get => _pageNumber;
+        init => _pageNumber = value < 1 ? 1 : value;
+    }
+
+    public int PageSize
+    {
+        get => _pageSize;
+        init => _pageSize = value > 10 ? 10 : value;
+    }
 
     public PaginationFilter()
     {
@@ -13,7 +25,7 @@ public class PaginationFilter
 
     public PaginationFilter(int pageNumber, int pageSize)
     {
-        PageNumber = pageNumber < 1 ? 1 : pageNumber;
-        PageSize = pageSize > 10 ? 10 : pageSize;
+        PageNumber = pageNumber;
+        PageSize = pageSize;
     }
 }

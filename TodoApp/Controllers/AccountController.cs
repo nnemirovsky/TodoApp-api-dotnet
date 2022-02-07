@@ -6,8 +6,6 @@ using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cryptography.KeyDerivation;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Infrastructure;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using TodoApp.Data;
 using TodoApp.Filters;
@@ -40,17 +38,17 @@ public class AccountController : Controller
     [HttpGet]
     public IActionResult GetUsers([FromQuery] PaginationFilter filter)
     {
-        var validFilter = new PaginationFilter(filter.PageNumber, filter.PageSize);
         var pagedData = _context.Users.OrderBy(u => u.Id)
-            .Skip((validFilter.PageNumber - 1) * validFilter.PageSize)
-            .Take(validFilter.PageSize).Select(user => new UserDto
+            .Skip((filter.PageNumber - 1) * filter.PageSize)
+            .Take(filter.PageSize)
+            .Select(user => new UserDto
             {
                 Email = user.Email,
                 Id = user.Id,
                 Name = user.Name,
                 Role = user.Role.ToString()
             }).ToList();
-        return Ok(PaginationHelper.CreatePagedResponse(pagedData, validFilter, _context.Users.Count(), _uriService,
+        return Ok(PaginationHelper.CreatePagedResponse(pagedData, filter, _context.Users.Count(), _uriService,
             Request.Path.Value!));
     }
 

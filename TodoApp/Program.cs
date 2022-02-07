@@ -7,7 +7,6 @@ using TodoApp.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
         {
@@ -36,19 +35,16 @@ builder.Services.AddSingleton<IUriService>(o =>
 });
 
 builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var dbConfig = builder.Configuration.GetSection("DB");
 var dbConnectionString = string.Format("Host={0};Port={1};Database={2};Username={3};Password={4}", dbConfig["Host"],
     dbConfig["Port"], dbConfig["Name"], dbConfig["User"], dbConfig["Password"]);
-// Console.WriteLine(dbConnectionString);
 builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(dbConnectionString));
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
